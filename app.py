@@ -20,7 +20,7 @@ import subprocess
 if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"):
         os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/tmp/ms-playwright")
         try:
-                    subprocess.run(["playwright", "install", "chromium", "--with-deps"], check=True, capture_output=True)
+        subprocess.run(                                [sys.executable, "-m", "playwright", "install", "chromium"], check=True, capture_output=True)
         except Exception:
             pass  # Will fail at audit time with clear error
 import time
@@ -141,6 +141,15 @@ Rules:
 
 async def collect_browser_data(url: str, log_queue: queue.Queue) -> dict:
     log_queue.put(("log", "Launching Chromium browser..."))
+        # Install Playwright browser on Vercel (runs in /tmp which is writable)
+        pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/tmp/ms-playwright")
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = pw_path
+    if not os.path.exists(pw_path):
+                log_queue.put(("log", "Installing Chromium browser (first run)..."))
+                subprocess.run(
+                                [sys.executable, "-m", "playwright", "install", "chromium"],
+                                check=True, capture_output=True
+                )
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
