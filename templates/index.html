@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Website Auditor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3355;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --text: #e8eaf6;
+      --muted: #8892b0;
+      --pass: #00d4aa;
+      --fail: #ff5370;
+      --warn: #ffcb6b;
+      --info: #82aaff;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 60%, #1a1027 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 24px 40px;
+      text-align: center;
+      position: relative;
+    }
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #6c63ff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .hero p { color: var(--muted); font-size: 1.05rem; margin-bottom: 32px; }
+
+    /* ── LOGOUT ── */
+    .logout-bar {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+    }
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 16px;
+      color: var(--muted);
+      font-size: .85rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-logout:hover { border-color: var(--fail); color: var(--fail); }
+
+    /* ── FORM ── */
+    .form-wrap { max-width: 720px; margin: 0 auto; }
+    .url-row { display: flex; gap: 10px; }
+    .url-row input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 1rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .url-row input:focus { border-color: var(--accent); }
+    .url-row input::placeholder { color: var(--muted); }
+
+    .btn-run {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none;
+      border-radius: 10px;
+      padding: 14px 28px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-run:hover { opacity: .88; }
+    .btn-run:active { transform: scale(.97); }
+    .btn-run:disabled { opacity: .45; cursor: not-allowed; }
+
+    .categories { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .cat-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: .8rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s;
+      user-select: none;
+    }
+    .cat-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── MAIN CONTENT ── */
+    .content { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── LOG STREAM ── */
+    #log-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      font-family: 'Fira Code', monospace;
+      font-size: .85rem;
+      color: var(--accent2);
+      min-height: 80px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      margin-bottom: 28px;
+    }
+    #log-box .log-line { padding: 2px 0; }
+    #log-box .log-line::before { content: "\25BA "; opacity: .5; }
+
+    /* ── SCORE OVERVIEW ── */
+    #overview { display: none; }
+    .score-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .score-circle {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      flex-shrink: 0;
+      border: 4px solid;
+    }
+    .score-circle .num { font-size: 2.2rem; line-height: 1; }
+    .score-circle .grade { font-size: 1rem; opacity: .8; }
+    .score-green { border-color: var(--pass); color: var(--pass); }
+    .score-yellow { border-color: var(--warn); color: var(--warn); }
+    .score-red { border-color: var(--fail); color: var(--fail); }
+
+    .overview-text h2 { font-size: 1.3rem; margin-bottom: 6px; }
+    .overview-text p { color: var(--muted); line-height: 1.6; max-width: 600px; }
+
+    /* ── CATEGORY BARS ── */
+    .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .cat-bar-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .cat-bar-card .cat-name { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+    .cat-bar-card .cat-score-num { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+    .bar-track { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .8s ease; }
+
+    /* ── ALERTS ── */
+    .alert-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+    @media(max-width:640px) { .alert-row { grid-template-columns: 1fr; } }
+    .alert-box { border-radius: 12px; padding: 20px; }
+    .alert-box h3 { font-size: 1rem; margin-bottom: 10px; }
+    .alert-box ul { padding-left: 0; list-style: none; }
+    .alert-box ul li { padding: 4px 0; font-size: .9rem; line-height: 1.5; }
+    .alert-critical { background: rgba(255,83,112,.1); border: 1px solid rgba(255,83,112,.3); }
+    .alert-critical h3 { color: var(--fail); }
+    .alert-critical li::before { content: "\1F6A8 "; }
+    .alert-wins { background: rgba(0,212,170,.1); border: 1px solid rgba(0,212,170,.3); }
+    .alert-wins h3 { color: var(--pass); }
+    .alert-wins li::before { content: "\26A1 "; }
+
+    /* ── FINDING CARDS ── */
+    .findings-grid { display: grid; gap: 16px; }
+    .finding-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .finding-card:hover { border-color: var(--accent); }
+    .finding-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .finding-icon { font-size: 1.4rem; }
+    .finding-title { font-weight: 700; font-size: 1rem; flex: 1; }
+    .badge {
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .badge-pass { background: rgba(0,212,170,.15); color: var(--pass); }
+    .badge-fail { background: rgba(255,83,112,.15); color: var(--fail); }
+    .badge-warn { background: rgba(255,203,107,.15); color: var(--warn); }
+    .badge-info { background: rgba(130,170,255,.15); color: var(--info); }
+    .priority-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .pri-critical { background: var(--fail); }
+    .pri-high { background: #ff9800; }
+    .pri-medium { background: var(--warn); }
+    .pri-low { background: var(--muted); }
+
+    .finding-body { padding: 16px 20px; }
+    .finding-summary { color: var(--muted); font-size: .9rem; margin-bottom: 14px; line-height: 1.6; }
+    .finding-items { display: grid; gap: 10px; }
+    .finding-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .fi-label { font-weight: 600; font-size: .88rem; margin-bottom: 3px; }
+    .fi-value { color: var(--accent2); font-family: monospace; font-size: .83rem; margin-bottom: 4px; }
+    .fi-rec { color: var(--muted); font-size: .82rem; line-height: 1.5; }
+    .fi-rec::before { content: "\1F4A1 Fix: "; color: var(--warn); }
+
+    /* ── SCREENSHOTS ── */
+    .screenshots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+    @media(max-width:640px) { .screenshots { grid-template-columns: 1fr; } }
+    .ss-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .ss-card img { width: 100%; display: block; }
+    .ss-card .ss-label { padding: 10px 14px; font-size: .85rem; color: var(--muted); }
+
+    /* ── SPINNER ── */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ERROR BANNER ── */
+    #error-box {
+      background: rgba(255,83,112,.1);
+      border: 1px solid rgba(255,83,112,.4);
+      border-radius: 10px;
+      padding: 16px 20px;
+      color: var(--fail);
+      margin-bottom: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ──────────────────────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="logout-bar">
+    <a href="/logout"><button class="btn-logout">Sign out</button></a>
+  </div>
+  <h1>&#x1F916; AI Website Auditor</h1>
+  <p>Real browser data &middot; Claude AI analysis &middot; Instant insights</p>
+
+  <div class="form-wrap">
+    <div class="url-row">
+      <input type="url" id="url-input" placeholder="https://example.com" autocomplete="off" />
+      <button class="btn-run" id="run-btn" onclick="startAudit()">Run Audit</button>
+    </div>
+    <div class="categories" id="cat-chips"></div>
+  </div>
+</div>
+
+<!-- ── CONTENT ────────────────────────────────────────────────────────────── -->
+<div class="content">
+  <div id="error-box"></div>
+
+  <!-- Live log -->
+  <div id="log-box"></div>
+
+  <!-- Overview -->
+  <div id="overview">
+    <div class="score-card" id="score-card"></div>
+    <div class="cat-grid" id="cat-grid"></div>
+    <div class="alert-row" id="alert-row"></div>
+
+    <div class="findings-grid" id="findings-grid"></div>
+
+    <div class="screenshots" id="screenshots">
+      <div class="ss-card">
+        <img src="/static/screenshot_desktop.png" alt="Desktop screenshot" id="ss-desktop" />
+        <div class="ss-label">&#x1F5A5; Desktop</div>
+      </div>
+      <div class="ss-card">
+        <img src="/static/screenshot_mobile.png" alt="Mobile screenshot" id="ss-mobile" />
+        <div class="ss-label">&#x1F4F1; Mobile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL_CATS = ["seo","performance","accessibility","security","bestpractices","mobile","content","links"];
+let activeCats = [...ALL_CATS];
+let evtSource = null;
+
+// Build category chips
+const chipContainer = document.getElementById('cat-chips');
+ALL_CATS.forEach(cat => {
+  const chip = document.createElement('span');
+  chip.className = 'cat-chip active';
+  chip.textContent = cat;
+  chip.dataset.cat = cat;
+  chip.addEventListener('click', () => {
+    if (chip.classList.contains('active')) {
+      if (activeCats.length === 1) return;
+      chip.classList.remove('active');
+      activeCats = activeCats.filter(c => c !== cat);
+    } else {
+      chip.classList.add('active');
+      activeCats.push(cat);
+    }
+  });
+  chipContainer.appendChild(chip);
+});
+
+function startAudit() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url || !url.startsWith('http')) {
+    showError('Please enter a valid URL starting with http:// or https://');
+    return;
+  }
+
+  hideError();
+  clearLog();
+  hideOverview();
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').innerHTML = '<span class="spinner"></span>Auditing...';
+
+  showLogBox();
+
+  if (evtSource) evtSource.close();
+
+  const params = new URLSearchParams({ url });
+  activeCats.forEach(c => params.append('categories', c));
+
+  evtSource = new EventSource('/audit/stream?' + params.toString());
+
+  evtSource.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'log') {
+      appendLog(msg.message);
+    } else if (msg.type === 'report') {
+      renderReport(msg.report);
+      appendLog('Analysis complete!');
+    } else if (msg.type === 'error') {
+      showError(msg.message);
+      resetBtn();
+      evtSource.close();
+    } else if (msg.type === 'done') {
+      resetBtn();
+      evtSource.close();
+    }
+  };
+
+  evtSource.onerror = () => {
+    showError('Connection lost. Please try again.');
+    resetBtn();
+    if (evtSource) evtSource.close();
+  };
+}
+
+document.getElementById('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startAudit();
+});
+
+function showLogBox() { document.getElementById('log-box').style.display = 'block'; }
+function clearLog() {
+  const lb = document.getElementById('log-box');
+  lb.innerHTML = '';
+  lb.style.display = 'none';
+}
+function appendLog(msg) {
+  const lb = document.getElementById('log-box');
+  lb.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.textContent = msg;
+  lb.appendChild(line);
+  lb.scrollTop = lb.scrollHeight;
+}
+
+function hideOverview() { document.getElementById('overview').style.display = 'none'; }
+function showOverview() { document.getElementById('overview').style.display = 'block'; }
+function showError(msg) {
+  const b = document.getElementById('error-box');
+  b.textContent = msg;
+  b.style.display = 'block';
+}
+function hideError() { document.getElementById('error-box').style.display = 'none'; }
+function resetBtn() {
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').innerHTML = 'Run Audit';
+}
+
+function scoreColor(s) {
+  return s >= 80 ? 'var(--pass)' : s >= 60 ? 'var(--warn)' : 'var(--fail)';
+}
+function scoreClass(s) {
+  return s >= 80 ? 'score-green' : s >= 60 ? 'score-yellow' : 'score-red';
+}
+
+function renderReport(r) {
+  showOverview();
+
+  const sc = document.getElementById('score-card');
+  const s = r.overall_score || 0;
+  sc.innerHTML = '<div class="score-circle ' + scoreClass(s) + '"><div class="num">' + s + '</div><div class="grade">' + (r.grade || '') + '</div></div><div class="overview-text"><h2>' + (r.url || '') + '</h2><p>' + (r.summary || '') + '</p></div>';
+
+  const cg = document.getElementById('cat-grid');
+  cg.innerHTML = '';
+  for (const [cat, val] of Object.entries(r.category_scores || {})) {
+    const color = scoreColor(val);
+    cg.innerHTML += '<div class="cat-bar-card"><div class="cat-name">' + cat + '</div><div class="cat-score-num" style="color:' + color + '">' + val + '</div><div class="bar-track"><div class="bar-fill" style="width:' + val + '%;background:' + color + '"></div></div></div>';
+  }
+
+  const ar = document.getElementById('alert-row');
+  const criticals = r.critical_issues || [];
+  const wins = r.quick_wins || [];
+  ar.innerHTML = '<div class="alert-box alert-critical"><h3>Critical Issues</h3><ul>' + (criticals.length ? criticals.map(c => '<li>' + c + '</li>').join('') : '<li>None &mdash; great job!</li>') + '</ul></div><div class="alert-box alert-wins"><h3>Quick Wins</h3><ul>' + wins.map(w => '<li>' + w + '</li>').join('') + '</ul></div>';
+
+  const fg = document.getElementById('findings-grid');
+  fg.innerHTML = '';
+  for (const res of (r.results || [])) {
+    const status = res.status || 'info';
+    const priority = res.priority || 'low';
+    const items = (res.items || []).map(item => '<div class="finding-item"><div class="fi-label">' + (item.label || '') + '</div>' + (item.value ? '<div class="fi-value">' + item.value + '</div>' : '') + (item.recommendation ? '<div class="fi-rec">' + item.recommendation + '</div>' : '') + '</div>').join('');
+    fg.innerHTML += '<div class="finding-card"><div class="finding-header"><span class="finding-icon">' + (res.icon || '') + '</span><span class="finding-title">' + (res.title || '') + '</span><span class="badge badge-' + status + '">' + status.toUpperCase() + '</span><span class="priority-dot pri-' + priority + '" title="Priority: ' + priority + '"></span></div><div class="finding-body"><div class="finding-summary">' + (res.summary || '') + '</div><div class="finding-items">' + items + '</div></div></div>';
+  }
+
+  const ts = Date.now();
+  document.getElementById('ss-desktop').src = '/static/screenshot_desktop.png?t=' + ts;
+  document.getElementById('ss-mobile').src = '/static/screenshot_mobile.png?t=' + ts;
+  document.getElementById('screenshots').style.display = 'grid';
+}
+</script>
+</body>
+</html>
