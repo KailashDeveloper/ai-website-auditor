@@ -1,0 +1,36 @@
+# Environment
+.env
+*.env
+
+# Runtime screenshots (generated at runtime)
+static/screenshot_desktop.png
+static/screenshot_mobile.png
+screenshot_desktop.png
+screenshot_mobile.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Reports
+*.json
+!package.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
