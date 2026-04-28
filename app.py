@@ -141,15 +141,15 @@ Rules:
 
 async def collect_browser_data(url: str, log_queue: queue.Queue) -> dict:
     log_queue.put(("log", "Launching Chromium browser..."))
-        # Install Playwright browser on Vercel (runs in /tmp which is writable)
-        pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/tmp/ms-playwright")
+    # Install Playwright browser on Vercel (runs in /tmp which is writable)
+    pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/tmp/ms-playwright")
     os.environ["PLAYWRIGHT_BROWSERS_PATH"] = pw_path
     if not os.path.exists(pw_path):
-                log_queue.put(("log", "Installing Chromium browser (first run)..."))
-                subprocess.run(
-                                [sys.executable, "-m", "playwright", "install", "chromium"],
-                                check=True, capture_output=True
-                )
+                queue.put(("log", "Installing Chromium browser (first run)..."))
+            subprocess.run(
+                            [sys.executable, "-m", "playwright", "install", "chromium"],
+                                            check=True, capture_output=True
+            )
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
