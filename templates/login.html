@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — AI Website Auditor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3355;
+      --accent: #6c63ff;
+      --text: #e8eaf6;
+      --muted: #8892b0;
+      --fail: #ff5370;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo h1 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #6c63ff, #00d4aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo p {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 6px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 1rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); opacity: .6; }
+
+    .btn-login {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity .2s, transform .1s;
+    }
+
+    .btn-login:hover { opacity: .88; }
+    .btn-login:active { transform: scale(.98); }
+
+    .error-msg {
+      background: rgba(255, 83, 112, .12);
+      border: 1px solid rgba(255, 83, 112, .4);
+      color: var(--fail);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .9rem;
+      margin-bottom: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">
+      <h1>AI Website Auditor</h1>
+      <p>Sign in to continue</p>
+    </div>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login', next=request.args.get('next', '')) }}">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="admin" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn-login">Sign In</button>
+    </form>
+  </div>
+</body>
+</html>
