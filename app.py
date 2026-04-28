@@ -14,6 +14,15 @@ import asyncio
 import json
 import os
 import sys
+import subprocess
+
+# Ensure Playwright browsers are available on Vercel
+if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"):
+        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/tmp/ms-playwright")
+        try:
+                    subprocess.run(["playwright", "install", "chromium", "--with-deps"], check=True, capture_output=True)
+        except Exception:
+            pass  # Will fail at audit time with clear error
 import time
 import threading
 import queue
